@@ -5,33 +5,12 @@ from PIL import Image
 from google.cloud import firestore
 from google.oauth2 import service_account
 import os
+from utils import get_all_collections, get_data_from_firestore, upload_data_to_firestore, initialize_firestore_client
+from data_objects import properties, units, field_mapping
 
 # Initialize Firestore client
-key_dict = st.secrets["textkey"]
-creds = service_account.Credentials.from_service_account_info(key_dict)
-db = firestore.Client(credentials=creds)
 
-
-# Function to get all collection names from Firestore database
-def get_all_collections(db):
-    excluded_collections = {'operators', 'posts', 'projects'}  # Set of collections to exclude
-    collections = db.collections()
-    return [collection.id for collection in collections if collection.id not in excluded_collections]
-
-
-# Function to get data from Firestore for a specific document in a collection
-def get_data_from_firestore(collection_name, document_id):
-    doc_ref = db.collection(collection_name).document(document_id)
-    doc = doc_ref.get()
-    return doc.to_dict() if doc.exists else None
-
-
-# Function to upload data to Firestore
-def upload_data_to_firestore(db, collection_name, document_id, data):
-    doc_ref = db.collection(collection_name).document(document_id)
-    doc_ref.set(data)
-    st.success("Data uploaded successfully!")
-
+db = initialize_firestore_client()
 
 image = Image.open('logo_ata.png')
 st.image(image, caption='Ata Logo', use_column_width=True)
@@ -49,14 +28,6 @@ properties = {
     'Schweißen': float,
 }
 
-units = {
-    'Brennen': 'min',
-    'Richten': 'min',
-    'Heften_Zussamenb_Verputzen': 'min',
-    'Anzeichnen': 'min',
-    'Schweißen': 'min',
-}
-
 firestore_data = {}
 
 # Display a select box with all collection names
@@ -69,7 +40,7 @@ if "vk_0_data" not in st.session_state:
 
 # Fetch and display the data for a known document ID ('Details') from the selected collection
 if selected_collection:
-    firestore_data = get_data_from_firestore(selected_collection, 'Details')
+    firestore_data = get_data_from_firestore(db, selected_collection, 'Details')
 
 # Update the session state data with existing values from the Firestore database
 if firestore_data:

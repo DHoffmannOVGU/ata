@@ -5,12 +5,15 @@ from PIL import Image
 from google.cloud import firestore
 from google.oauth2 import service_account
 from VK_ST_0 import get_all_collections, get_data_from_firestore, field_mapping, upload_data_to_firestore
-
+from data_objects import deckung_properties
 
 # Initialize Firestore client
-key_dict = st.secrets["textkey"]
-creds = service_account.Credentials.from_service_account_info(key_dict)
-db = firestore.Client(credentials=creds)
+# key_dict = st.secrets["textkey"]
+# creds = service_account.Credentials.from_service_account_info(key_dict)
+# db = firestore.Client(credentials=creds)
+
+db = firestore.Client.from_service_account_json("ata-firestore-key.json")
+
 
 
 # # st.set_page_config(layout="wide")
@@ -31,51 +34,9 @@ def try_convert_to_float(value, default=0.0):
 
 
 
-# Define data types and properties
-deckung_properties = {
-    'Kunde': str,
-    'Benennung': str,
-    'Zeichnungs- Nr.': str,
-    'Ausführen Nr.': str,
-    'Gewicht': float,
-    'Material Kosten': float,
-    'Brennen': float,
-    'Schlossern': float,
-    'Schweißen': float,
-    'sonstiges (Eur/hour)': float,
-    'sonstiges (hour)': float,
-    'Prüfen , Doku': float,
-    'Strahlen / Streichen': float,
-    'techn. Bearb.': float,
-    'mech. Vorbearb.': float,
-    'mech. Bearbeitung': float,
-    'Zwischentransporte': float,
-    'transporte': float,
-    'Erlös': float,
-    'DB': float,
-    'Deckungsbeitrag': float,
-}
 
 
-units = {
-    'Gewicht': 'kg',
-    'Material Kosten': '€',
-    'Brennen': 'min',
-    'Schlossern': 'min',
-    'Schweißen': 'min',
-    'sonstiges (Eur/hour)': '€/min',
-    'sonstiges (hour)': 'min',
-    'Prüfen , Doku': '€',
-    'Strahlen / Streichen': '€',
-    'techn. Bearb.': '€',
-    'mech. Vorbearb.': '€',
-    'mech. Bearbeitung': '€',
-    'Zwischentransporte': '€',
-    'transporte': '€',
-    'Erlös': '€',
-    'DB': '%',
-    'Deckungsbeitrag': '€',
-}
+
 
 
 vk_st_0_field_mapping = {
@@ -145,7 +106,7 @@ if st.session_state.current_collection != selected_collection:
     st.session_state.db_percentage = 0.0  # Reset to default or fetch new value
     # Load new data from Firestore for the selected collection
     if selected_collection:
-        existing_deckung_data = get_data_from_firestore(selected_collection, 'Deckung')
+        existing_deckung_data = get_data_from_firestore(db, selected_collection, 'Deckung')
         if existing_deckung_data:
             # Update session state with existing data
             for key, value in existing_deckung_data.items():
@@ -153,11 +114,11 @@ if st.session_state.current_collection != selected_collection:
                     st.session_state.deckung_data[key] = value
                     # st.write(f"{key}: {value}")
             # st.write("Debug - Updated Session State:", st.session_state.deckung_data)
-        details_data = get_data_from_firestore(selected_collection, 'Details')
+        details_data = get_data_from_firestore(db, selected_collection, 'Details')
         if details_data:
             for app_field, firestore_field in field_mapping.items():
                 st.session_state.deckung_data[app_field] = details_data.get(firestore_field, "")
-        vk_st_0_data = get_data_from_firestore(selected_collection, 'VK-ST-0')
+        vk_st_0_data = get_data_from_firestore(db, selected_collection, 'VK-ST-0')
         if vk_st_0_data:
             for app_field, firestore_field in vk_st_0_field_mapping.items():
                 st.session_state.deckung_data[app_field] = vk_st_0_data.get(firestore_field, "")
@@ -167,7 +128,7 @@ if st.session_state.current_collection != selected_collection:
                     df.at[row_index, column_name] = value
             st.session_state['Material'] = df.to_dict(orient="index")
         try:
-            deckungsbeitrag_data = get_data_from_firestore(selected_collection, 'Deckung')
+            deckungsbeitrag_data = get_data_from_firestore(db, selected_collection, 'Deckung')
 
             if deckungsbeitrag_data:
                 # Safely convert to float, default to 0.0 if conversion fails

@@ -5,39 +5,11 @@ from PIL import Image
 from google.cloud import firestore
 from google.oauth2 import service_account
 import os
+from utils import get_all_collections, get_data_from_firestore, upload_data_to_firestore, initialize_firestore_client
+from components.sidebar import page_navigation
+from components.columns import four_text_columns
 
-# Initialize Firestore client
-key_dict = st.secrets["textkey"]
-creds = service_account.Credentials.from_service_account_info(key_dict)
-db = firestore.Client(credentials=creds)
-
-
-# Function to get all collection names from Firestore database
-def get_all_collections(db):
-    excluded_collections = {'operators', 'posts', 'projects'}  # Set of collections to exclude
-    collections = db.collections()
-    return [collection.id for collection in collections if collection.id not in excluded_collections]
-
-
-# Function to get all document IDs from a Firestore collection
-def get_all_document_ids(collection_name):
-    docs = db.collection(collection_name).stream()
-    return [doc.id for doc in docs]
-
-
-# Function to get data from Firestore for a specific document in a collection
-def get_data_from_firestore(collection_name, document_id):
-    doc_ref = db.collection(collection_name).document(document_id)
-    doc = doc_ref.get()
-    return doc.to_dict() if doc.exists else None
-
-
-# Function to upload data to Firestore
-def upload_data_to_firestore(db, collection_name, document_id, data):
-    doc_ref = db.collection(collection_name).document(document_id)
-    doc_ref.set(data)
-    st.success("Data uploaded successfully!")
-
+db = initialize_firestore_client()
 
 image = Image.open('logo_ata.png')
 st.image(image, caption='Ata Logo', use_column_width=True)
@@ -103,8 +75,8 @@ if st.session_state.current_collection != selected_collection:
 
     # Load new data from Firestore for the selected collection
     if selected_collection:
-        firestore_data = get_data_from_firestore(selected_collection, 'Details')
-        vk_st_0_data = get_data_from_firestore(selected_collection, 'VK-ST-0')
+        firestore_data = get_data_from_firestore(db, selected_collection, 'Details')
+        vk_st_0_data = get_data_from_firestore(db, selected_collection, 'VK-ST-0')
 
         # Update session state with new data
         if firestore_data:
@@ -123,7 +95,11 @@ if vk_st_0_data:
         if prop not in ['Kunde', 'Gegenstand', 'Zeichnungs- Nr.', 'Ausführen Nr.']:  # Remaining fields
             st.session_state.vk_st0_data[prop] = vk_st_0_data.get(prop, "")
 
+# UI 
+
 st.title("Material List Data")
+
+page_navigation()
 
 # If firestore_data is fetched, update the session state
 if firestore_data:
@@ -132,6 +108,15 @@ if firestore_data:
         if app_field == 'Gegenstand':
             firestore_field = 'Benennung'
         st.session_state.vk_st0_data[app_field] = firestore_data.get(firestore_field, "")
+
+def project_info(project_data):
+    col1,  st.columns(len(project_data))
+    for i, (key, value) in enumerate(project_data.items()):
+        project_data_columns[i].write(f"{key}: {value}")
+
+
+
+project_info(details_data)
 
 col1, col2 = st.columns(2)
 
@@ -167,16 +152,17 @@ def download_json(df):
 
 
 # Provide download options
-if st.button("Download as Excel"):
-    excel_data = download_excel(df)
-    st.download_button("Download Excel File", excel_data, file_name="data.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+with st.expander("Download Data"):
+    if st.button("Download as Excel", use_container_width=True):
+        excel_data = download_excel(df)
+        st.download_button("Download Excel File", excel_data, file_name="data.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-if st.button("Download as JSON"):
-    json_data = download_json(df)
-    st.download_button("Download JSON File", json_data, file_name="data.json", mime="application/json")
+    if st.button("Download as JSON", use_container_width=True):
+        json_data = download_json(df)
+        st.download_button("Download JSON File", json_data, file_name="data.json", mime="application/json", use_container_width=True)
 
-if st.button("Upload to Database"):
+if st.button("Upload to Database", use_container_width=True, type="primary"):
     upload_data = {prop: st.session_state.vk_st0_data[prop] for prop in properties if
                    prop not in ['Kunde', 'Gegenstand', 'Zeichnungs- Nr.', 'Ausführen Nr.']}
     upload_data_to_firestore(db, selected_collection, 'VK-ST-0', upload_data)
