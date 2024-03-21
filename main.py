@@ -58,7 +58,6 @@ page_navigation()
 
 
 with st.expander('Project Details', expanded=True):
-    
     # Input fields for project instantiation
     col1, col2 = st.columns([4,1])
     with col2:
