@@ -134,7 +134,7 @@ def main():
         benennung = st.text_input('Benennung')
         zeichnungs_nr = st.text_input('Zeichnungs Nr')
         ausfuehren_nr = st.text_input('Ausführen Nr')
-        submit_button = st.form_submit_button(label='Create Project')
+        submit_button = st.form_submit_button(label='Create Project', use_container_width=True, type="primary")
 
         if submit_button:
             success = instantiate_project(kunde, benennung, zeichnungs_nr, ausfuehren_nr, db)
